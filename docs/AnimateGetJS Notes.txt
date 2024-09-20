@@ -1,0 +1,21 @@
+AnimateGetJS
+
+
+In progress:
+- code generation for the frames
+
+Unresolved:
+- output code generation
+- play pause stop buttons
+- creating frame when animation drop on list
+
+Resolved:
+- creating multiple frame list
+- removing frame list
+- creating frame in the specific list by add button
+- removing frame from the list
+- frame can drag and drop within the list or from one to another list
+
+On hold:
+- minimizing all and maximize canvas
+ 

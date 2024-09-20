@@ -1,0 +1,339 @@
+:root {
+  --background-primary: #121212;
+  --background-secondary: #1e1e1e;
+  --background-tertiary: #0e0922;
+
+  --text-primary: #ffffff;
+  --text-secondary: #bbbbbb;
+  --text-disabled: #666666;
+
+  --accent-primary: #bb86fc;
+  --accent-secondary: #03dac5;
+  --accent-error: #cf6679;
+
+  --border-primary: #333333;
+  --border-secondary: #444444;
+
+  --button-primary-bg: #3700b3;
+  --button-primary-text: #ffffff;
+  --button-secondary-bg: #03dac5;
+  --button-secondary-text: #000000;
+}
+
+body {
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+}
+
+.App {
+  display: grid;
+  min-height: 100vh;
+  color: var(--text-primary);
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 20vw 60vw 20vw;
+  height: 60vh;
+  overflow: hidden;
+}
+
+.bottom {
+  background-color: var(--background-tertiary);
+  height: 40vh;
+  /* overflow: hidden; */
+}
+
+.sidebar {
+  width: 100%;
+  height: 100%;
+  background-color: var(--background-tertiary);
+  color: var(--text-primary);
+  border-right: 1px solid var(--border-primary);
+  border: 3px solid var(--button-primary-bg);
+  box-shadow: inset 0 0 20px -3px var(--button-primary-bg);
+}
+
+.sidebar h2 {
+  text-align: center;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  border: 3px solid var(--button-primary-bg);
+  box-shadow: inset 0 0 20px -3px black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.canvas .code-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+.canvas .animations-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.canvas .add-element-btn,
+.canvas .generate-code-btn,
+.canvas .play-btn {
+  position: absolute;
+  top: 10px;
+}
+.canvas .generate-code-btn {
+  left: 185px;
+}
+.canvas .play-btn {
+  right: 140px;
+}
+.code-generator {
+  text-indent: 10px;
+  width: 100%;
+  height: 100%;
+  background-color: var(--background-tertiary);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border-primary);
+  box-shadow: inset 0 0 20px -3px var(--button-primary-bg);
+  border: 3px solid var(--button-primary-bg);
+}
+
+.code-generator h2 {
+  text-align: center;
+}
+
+.element {
+  width: 100px;
+  height: 100px;
+  margin: 10px;
+  background-color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.animations-list {
+  overflow-y: scroll;
+  max-height: 50vh;
+  margin-left: 15px;
+  width: 90%;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-tertiary);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--button-primary-bg);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.animations-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.animation-item {
+  cursor: pointer;
+  padding: 5px;
+  margin: 5px 0;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--background-secondary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.animation-item:hover {
+  background-color: var(--background-tertiary);
+}
+
+.add-anim-to-list {
+  position: absolute;
+  right: 20px;
+  transform: scale(1);
+  border: 1px solid;
+  padding: 0 5px;
+  box-sizing: border-box;
+  transition: all 0.15s;
+}
+
+.add-anim-to-list:hover {
+  background-color: white;
+  color: #000000;
+}
+
+.framebar {
+  position: relative;
+  color: var(--text-primary);
+  background-color: var(--background-primary);
+  max-width: 100vw;
+  min-height: 100%;
+  border: 3px solid var(--accent-error);
+  box-sizing: border-box;
+}
+
+.framebar h2 {
+  text-indent: 20px;
+}
+
+.framebar h4 {
+  text-indent: 10px;
+}
+
+.frames {
+  margin-top: -10px;
+  overflow: scroll;
+  width: 100%;
+}
+
+.frames::-webkit-scrollbar {
+  display: none;
+}
+
+.framebar .frame-item {
+  min-width: 230px;
+  height: 70px;
+  cursor: pointer;
+  padding: 5px;
+  margin: 10px 5px;
+  border: 1px solid var(--border-secondary);
+  background-color: var(--background-tertiary);
+  color: var(--text-primary);
+  transition: all 0.15s;
+}
+
+.framebar .frame-item:hover {
+  box-shadow: 0 0 10px -3px #5a19f1;
+}
+.frame-item .stepCount {
+  padding: 0 5px;
+  margin: 0 5px;
+  border-radius: 2px;
+  background-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.frame-item .remove-btn {
+  width: 68px;
+  height: 20px;
+  border: 0.5px solid var(--accent-error);
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.frame-item .more-btn {
+  padding: 0 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.frame-item .more-btn:hover {
+  cursor: pointer;
+}
+
+.frame-item .remove-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--accent-error);
+  cursor: pointer;
+}
+
+.frame-item .stepName {
+  width: 100%;
+  display: block;
+  position: relative;
+}
+
+.frame-item .stepDesc {
+  display: flex;
+  justify-content: center;
+}
+
+.frame-item .stepName div {
+  width: fit-content;
+  display: flex;
+  position: absolute;
+  right: 1px;
+  top: 0;
+}
+
+.frame-item .stepDisplacement {
+  display: block;
+}
+
+.frame-item .stepDirection {
+  display: block;
+}
+
+.frame-list {
+  height: 100px;
+  display: flex;
+  align-items: start;
+  flex-wrap: nowrap; /* Ensure the frame lists stay in a single line */
+  position: relative;
+  box-shadow: inset 0 0 20px -3px black;
+  margin-top: 5px;
+}
+
+.frame-item {
+  /* Adjust styles for each frame item */
+  flex: 0 0 auto; /* Ensure the frame items don't grow or shrink */
+}
+
+/* Add styles for horizontal scrolling */
+.frames {
+  /* display: flex; */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  white-space: nowrap; /* Prevent wrapping of frame lists */
+}
+
+.add-new-frame-list-btn {
+  position: absolute;
+  top: 10px;
+  right: 50px;
+}
+
+.remove-list-btn {
+  position: absolute;
+  top: 45px;
+  left: 3px;
+  transform: scale(0.8);
+}
+
+.frame-selection-modal {
+  position: absolute;
+  top: 15vh;
+  left: calc(20vw + 20px);
+  background: rgba(55, 0, 179, 0.3);
+  height: 30vh;
+  padding: 10px;
+  text-align: center;
+  border-radius: 5px;
+  box-shadow: 0 0 20px -3px black;
+}
+.frame-selection-modal button {
+  display: block;
+  margin: 5px;
+}
+.close-framelist-popup-btn:hover {
+  cursor: pointer;
+}
