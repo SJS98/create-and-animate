@@ -2,18 +2,18 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import "./App.css";
 import AnimationsList from "./components/AnimationsList";
 import axios from "axios";
-
+import { secureStorify } from "secure-storify";
 const AppContext = createContext();
 
 export default function App() {
   const [elements, setElements] = useState([]);
+  const [code, setCode] = useState("");
+  const [animations] = useState(AnimationsList);
   const [frames, setFrames] = useState([[]]);
   const [showFrameSelection, setShowFrameSelection] = useState(false);
   const [selectedAnimation, setSelectedAnimation] = useState(null);
   const [generatedCode, setGeneratedCode] = useState("");
-  const [iframeContent, setIframeContent] = useState("");
-
-  const [animations] = useState(AnimationsList);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleAddAnimation = (animationName) => {
     setSelectedAnimation(animationName);
@@ -26,14 +26,12 @@ export default function App() {
         frames[frameListIndex][frames[frameListIndex].length - 1]?.animation
           ?.endTime;
 
-      const animation = animations.find(
-        (anim) => anim.animationName === selectedAnimation
-      );
-
       const newFrame = {
-        frameName: `Frame ${frames[frameListIndex].length + 1}`,
+        framName: `Frame ${frames[frameListIndex].length + 1}`,
         animation: {
-          ...animation,
+          ...animations.find(
+            (anim) => anim.animationName === selectedAnimation
+          ),
           startTime: preAnimEndTime || 0,
           endTime: preAnimEndTime ? preAnimEndTime + 0.15 : 0.15,
           animationType: selectedAnimation,
@@ -61,30 +59,69 @@ export default function App() {
     setFrames([...frames, []]);
   };
 
-  const handleGenerateCode = async () => {
-    // Prepare shapes and animations data
-    const shapes = elements.map((el) => ({
-      id: el.id,
-      type: el.type,
-      style: el.style,
-      children: el.children,
+  const generateHTML = async () => {
+    // Prepare the data to send to ChatGPT
+    const shapeData = elements.map((element) => ({
+      type: element.type,
+      properties: {
+        width: element.width,
+        height: element.height,
+        color: element.color,
+        position: {
+          x: element.x,
+          y: element.y,
+        },
+        children: element.children || [],
+      },
+      animations: element.animations || [],
     }));
 
-    const animationsData = frames; // Adjust as per your frames structure
-
     try {
-      const response = await axios.post("http://localhost:5000/generate-code", {
-        shapes,
-        animations: animationsData,
-      });
-      setGeneratedCode(response.data.code);
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant that generates HTML, CSS, and JavaScript code based on the provided shape data and animations.",
+            },
+            {
+              role: "user",
+              content: `Generate the HTML, CSS, and JavaScript code for the following shapes and their animations:\n\n${JSON.stringify(
+                shapeData,
+                null,
+                2
+              )}`,
+            },
+          ],
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer YOUR_OPENAI_API_KEY`, // Replace with your OpenAI API key
+          },
+        }
+      );
+
+      const aiGeneratedCode = response.data.choices[0].message.content;
+      setGeneratedCode(aiGeneratedCode);
     } catch (error) {
       console.error("Error generating code:", error);
     }
   };
 
   const handlePlay = () => {
-    setIframeContent(generatedCode);
+    setIsPlaying(true);
+    // Implement logic to execute the generated code
+    // This could involve inserting the generated HTML/CSS/JS into an iframe
+  };
+
+  const handleStop = () => {
+    setIsPlaying(false);
+    // Implement logic to stop the animation
   };
 
   return (
@@ -112,12 +149,15 @@ export default function App() {
               animations={animations}
               frames={frames}
               setFrames={setFrames}
-              handleGenerateCode={handleGenerateCode}
-              handlePlay={handlePlay}
             />
           </div>
           <div className="right">
-            <CodeGenerator code={generatedCode} />
+            <CodeGenerator
+              elements={elements}
+              code={code}
+              setCode={setCode}
+              frames={frames}
+            />
           </div>
         </div>
         <div className="bottom">
@@ -127,15 +167,10 @@ export default function App() {
             setFrames={setFrames}
             addNewFrameList={addNewFrameList}
           />
+          <button onClick={generateHTML}>Generate Code</button>
+          <button onClick={handlePlay}>Play</button>
+          <button onClick={handleStop}>Stop</button>
         </div>
-        {iframeContent && (
-          <iframe
-            title="Animation Preview"
-            sandbox="allow-scripts"
-            srcDoc={iframeContent}
-            style={{ width: "100%", height: "500px", border: "1px solid #ccc" }}
-          ></iframe>
-        )}
         {showFrameSelection && (
           <div className="frame-selection-modal">
             {frames.length > 0 ? (
@@ -159,6 +194,15 @@ export default function App() {
             </span>
           </div>
         )}
+        {isPlaying && (
+          <div className="playback-container">
+            <iframe
+              title="Animation Playback"
+              srcDoc={generatedCode}
+              style={{ width: "100%", height: "500px", border: "none" }}
+            ></iframe>
+          </div>
+        )}
       </div>
     </AppContext.Provider>
   );
@@ -166,44 +210,25 @@ export default function App() {
 
 function CodeGenerator({ elements, code, setCode, frames }) {
   useEffect(() => {
-    const generateCode = async () => {
-      let code = "";
-
-      // Iterate through each element
-      elements.forEach((element, i) => {
-        // Check if the element has frames
-        if (frames && frames.length > 0) {
-          // Iterate through each frame list
-          frames.forEach((frameList, j) => {
-            // Iterate through each frame of the frame list
-            frameList.forEach((frame) => {
-              const animation = AnimationsList.find(
-                (anim) => anim.animationName === frame.animation.animationType
-              );
-
-              // Check if the animation is found
-              if (animation) {
-                // Generate code for each frame
-                code += `// Animation for Element ${i + 1}, Frame List ${
-                  j + 1
-                }, Frame: ${frame.framName}\n`;
-                code += `${
-                  animation.code
-                }(document.querySelector('.element${i}'), ${JSON.stringify(
-                  animation.variables
-                )});\n\n`;
-              }
-            });
-          });
-        }
-      });
-
-      console.log(code);
-      return code;
+    const generateCode = () => {
+      return elements
+        .map((element) => {
+          if (element.animations && element.animations.length > 0) {
+            return element.animations
+              .map(
+                (anim) =>
+                  `document.querySelector('.element-${element.id}').classList.add('${anim}');`
+              )
+              .join("\n");
+          }
+          return "";
+        })
+        .join("\n");
     };
 
-    generateCode().then((result) => setCode(result));
-  }, [elements]);
+    const generatedCode = generateCode();
+    setCode(generatedCode);
+  }, [elements, setCode]);
 
   return (
     <div className="code-generator">
@@ -212,122 +237,170 @@ function CodeGenerator({ elements, code, setCode, frames }) {
     </div>
   );
 }
+import { ResizableBox } from "react-resizable";
+import Draggable from "react-draggable";
+import "react-resizable/css/styles.css";
 
-function Canvas({
-  elements,
-  setElements,
-  animations,
-  frames,
-  setFrames,
-  handleGenerateCode,
-  handlePlay,
-}) {
-  const addElement = () => {
-    const newElement = { type: "shape", animation: null, frames: [] };
+function Canvas({ elements, setElements, animations, frames, setFrames }) {
+  const { addNewFrameList } = useContext(AppContext);
+
+  const addElement = (type = "div") => {
+    const newElement = {
+      id: Date.now(),
+      type: type,
+      width: 100,
+      height: 100,
+      color: "#" + (((1 << 24) * Math.random()) | 0).toString(16),
+      x: 0,
+      y: 0,
+      animations: [],
+      children: [],
+    };
     setElements([...elements, newElement]);
   };
 
-  const handleDrop = (event, elementIndex, frameListIndex) => {
-    const animation = event.dataTransfer.getData("text");
-    const updatedElements = [...elements];
-    updatedElements[elementIndex].animation = animation;
-
-    const preAnimEndTime =
-      frames[frameListIndex][frames[frameListIndex].length - 1]?.animation
-        ?.endTime;
-
-    const newFrame = {
-      framName: `Frame ${frames[frameListIndex].length + 1}`,
-      animation: {
-        ...animations[animation],
-        startTime: preAnimEndTime || 0,
-        endTime: preAnimEndTime ? preAnimEndTime + 0.15 : 0.15,
-        animationType: animation,
-        displacement:
-          "50" +
-          (["rotate", "spin", "shake"].includes(animation) ? "deg" : "px"),
-        direction: ["rotate", "spin", "shake"].includes(animation)
-          ? "clockwise"
-          : "forward",
-      },
-    };
-
-    updatedElements[elementIndex].frames.push(newFrame);
-    setElements(updatedElements);
-    const updatedFrames = frames.map((frameList, index) =>
-      index === frameListIndex ? [...frameList, newFrame] : frameList
+  const handleDragStop = (e, data, id) => {
+    const updatedElements = elements.map((el) =>
+      el.id === id ? { ...el, x: data.x, y: data.y } : el
     );
-    setFrames(updatedFrames);
+    setElements(updatedElements);
   };
 
-  const [codeflag, setCodeFlag] = useState(false);
-  const [animflag, setAnimFlag] = useState(false);
+  const handleResize = (event, { element, size }, id) => {
+    const updatedElements = elements.map((el) =>
+      el.id === id ? { ...el, width: size.width, height: size.height } : el
+    );
+    setElements(updatedElements);
+  };
 
-  useEffect(() => {
-    handleCanvasWidth();
-  }, [animflag, codeflag]);
+  const handleDelete = (id) => {
+    const updatedElements = elements.filter((el) => el.id !== id);
+    setElements(updatedElements);
+  };
 
-  const handleCanvasWidth = () => {
-    const top = document.querySelector(".top");
-    if (animflag === true && codeflag === true) {
-      top.style.gridTemplateColumns = "0vw 100vw 0vw";
-    } else if (animflag === true && codeflag === false) {
-      top.style.gridTemplateColumns = "0vw 80vw 20vw";
-    } else if (animflag === false && codeflag === true) {
-      top.style.gridTemplateColumns = "20vw 80vw 0vw";
-    } else if (animflag === false && codeflag === false) {
-      top.style.gridTemplateColumns = "20vw 60vw 20vw";
+  const handleDrop = (event, id) => {
+    const animation = event.dataTransfer.getData("text");
+    const updatedElements = elements.map((el) =>
+      el.id === id ? { ...el, animations: [...el.animations, animation] } : el
+    );
+    setElements(updatedElements);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+  };
+
+  const addChildShape = (parentId) => {
+    const parent = elements.find((el) => el.id === parentId);
+    if (parent) {
+      const newChild = {
+        id: Date.now(),
+        type: "div",
+        width: 50,
+        height: 50,
+        color: "#" + (((1 << 24) * Math.random()) | 0).toString(16),
+        x: parent.x + 20,
+        y: parent.y + 20,
+        animations: [],
+        children: [],
+      };
+      const updatedElements = elements.map((el) =>
+        el.id === parentId
+          ? { ...el, children: [...el.children, newChild] }
+          : el
+      );
+      setElements(updatedElements);
     }
-  };
-  const handleCodeGenerationSidebar = () => {
-    document.querySelector(".code-generator").style.display = codeflag
-      ? "block"
-      : "none";
-    setCodeFlag(!codeflag);
-  };
-
-  const handleAnimationsSidebar = () => {
-    document.querySelector(".sidebar").style.display = animflag
-      ? "block"
-      : "none";
-    setAnimFlag(!animflag);
   };
 
   return (
     <div className="canvas">
-      <button className="code-btn" onClick={handleCodeGenerationSidebar}>
-        CODE
+      <button className="add-element-btn" onClick={() => addElement()}>
+        Add Shape
       </button>
-      <button className="generate-code-btn" onClick={handleGenerateCode}>
-        Generate
-      </button>
-      <button className="add-element-btn" onClick={addElement}>
-        Add Element
-      </button>
-      <button className="play-btn" onClick={handlePlay}>
-        Play
-      </button>
-      <button className="animations-btn" onClick={handleAnimationsSidebar}>
-        Animations
-      </button>
-      {elements.map((element, elementIndex) => (
-        <div
-          key={elementIndex}
-          className={`element element${elementIndex} ${element.animation}`}
+      {elements.map((element) => (
+        <Draggable
+          key={element.id}
+          position={{ x: element.x, y: element.y }}
+          onStop={(e, data) => handleDragStop(e, data, element.id)}
         >
-          {frames.map((_, frameListIndex) => (
+          <ResizableBox
+            width={element.width}
+            height={element.height}
+            onResizeStop={(e, size) => handleResize(e, size, element.id)}
+            minConstraints={[50, 50]}
+            maxConstraints={[500, 500]}
+          >
             <div
-              key={frameListIndex}
-              className="drop-zone"
-              onDrop={(event) =>
-                handleDrop(event, elementIndex, frameListIndex)
-              }
-              onDragOver={(event) => event.preventDefault()}
+              className={`element ${element.animations.join(" ")}`}
+              style={{
+                width: "100%",
+                height: "100%",
+                backgroundColor: element.color,
+                position: "relative",
+                overflow: "hidden",
+              }}
+              onDrop={(e) => handleDrop(e, element.id)}
+              onDragOver={handleDragOver}
             >
-              Drop Animation Here for Frame List {frameListIndex + 1}
+              <span
+                className="delete-btn"
+                onClick={() => handleDelete(element.id)}
+              >
+                &times;
+              </span>
+              <button
+                className="add-child-btn"
+                onClick={() => addChildShape(element.id)}
+              >
+                Add Child
+              </button>
+              {/* Render child shapes recursively */}
+              {element.children.map((child) => (
+                <Draggable
+                  key={child.id}
+                  position={{ x: child.x, y: child.y }}
+                  onStop={(e, data) => handleDragStop(e, data, child.id)}
+                >
+                  <ResizableBox
+                    width={child.width}
+                    height={child.height}
+                    onResizeStop={(e, size) => handleResize(e, size, child.id)}
+                    minConstraints={[30, 30]}
+                    maxConstraints={[300, 300]}
+                  >
+                    <div
+                      className={`element ${child.animations.join(" ")}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: child.color,
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                      onDrop={(e) => handleDrop(e, child.id)}
+                      onDragOver={handleDragOver}
+                    >
+                      <span
+                        className="delete-btn"
+                        onClick={() => handleDelete(child.id)}
+                      >
+                        &times;
+                      </span>
+                      <button
+                        className="add-child-btn"
+                        onClick={() => addChildShape(child.id)}
+                      >
+                        Add Child
+                      </button>
+                      {/* Further nesting can be handled recursively if needed */}
+                    </div>
+                  </ResizableBox>
+                </Draggable>
+              ))}
             </div>
-          ))}
-        </div>
+          </ResizableBox>
+        </Draggable>
       ))}
     </div>
   );
